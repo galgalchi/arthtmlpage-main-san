@@ -65,8 +65,9 @@ globalThis.SanData = (() => {
     }
     if (settings.사진포트폴리오 != null && !Array.isArray(settings.사진포트폴리오)) throw new Error('사진포트폴리오는 카테고리 배열이어야 합니다.');
     const images = (settings.사진포트폴리오 || []).map((cat, i) => {
-      if (!cat || typeof cat.카테고리 !== 'string' || !cat.카테고리.trim() || !Array.isArray(cat.이미지)) throw new Error('사진 카테고리 이름과 이미지 배열을 확인해주세요: ' + (i + 1));
-      return { title: cat.카테고리.trim(), images: cat.이미지.map(imageUrl) };
+      if (!cat || typeof cat.카테고리 !== 'string' || !cat.카테고리.trim()) throw new Error('사진 카테고리 이름을 확인해주세요: ' + (i + 1));
+      if (cat.이미지 != null && !Array.isArray(cat.이미지)) throw new Error('배포용 이미지 목록을 확인해주세요: ' + (i + 1));
+      return { title: cat.카테고리.trim(), folder: folderPath(cat.폴더), images: (cat.이미지 || []).map(imageUrl) };
     });
     return { name: settings.이름 || '샨', defaultType, statuses, notes, images };
   }
@@ -76,5 +77,18 @@ globalThis.SanData = (() => {
     return `${get('year')}-${get('month')}-${get('day')}`;
   }
   const statusFor = (key, data, current = seoulToday()) => key < current ? 'closed' : data.statuses[key] || data.defaultType;
-  return { normalize, dateKey, seoulToday, statusFor, labels, imageUrl };
+  function folderPath(value) {
+    if (typeof value !== 'string' || !value.trim()) throw new Error('사진 카테고리의 폴더를 입력해주세요.');
+    const input = value.trim();
+    if (/^[a-z][a-z\d+.-]*:/i.test(input) || input.startsWith('/') || input.includes('\\')) throw new Error('폴더는 저장소 안의 상대경로로 입력해주세요: ' + value);
+    const relative = input.startsWith('./') ? input.slice(2) : input;
+    const segments = relative.split('/').map(segment => {
+      let decoded;
+      try { decoded = decodeURIComponent(segment); } catch (_) { throw new Error('폴더 경로의 인코딩을 확인해주세요: ' + value); }
+      if (!decoded || decoded === '.' || decoded === '..' || /[\/\\\u0000-\u001f\u007f]/.test(decoded)) throw new Error('허용하지 않는 폴더 경로입니다: ' + value);
+      return decoded;
+    });
+    return './' + segments.map(encodeURIComponent).join('/');
+  }
+  return { normalize, dateKey, seoulToday, statusFor, labels, imageUrl, folderPath };
 })();
