@@ -1,4 +1,4 @@
-// 영상과 이미지에서 동일한 탐색, 동그라미 창, 썸네일 스크롤을 사용합니다.
+// 이미지 갤러리의 탐색, 동그라미 창, 썸네일 스크롤을 관리합니다.
 function initPortfolioCarousel(root, slideSelector) {
   const slides = Array.from(root.querySelectorAll(slideSelector));
   const thumbs = Array.from(root.querySelectorAll('.slider-thumb-btn'));

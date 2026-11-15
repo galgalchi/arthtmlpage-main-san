@@ -15,6 +15,27 @@ globalThis.SanData = (() => {
     if (typeof value !== 'string' && !Array.isArray(value)) throw new Error('날짜 목록은 쉼표로 구분한 문자열 또는 배열이어야 합니다.');
     return (Array.isArray(value) ? value : value.split(/[,\n]/)).filter(v => String(v).trim()).map(dateKey);
   }
+  function imageUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) throw new Error('이미지 경로는 비어 있지 않은 문자열이어야 합니다.');
+    const input = value.trim();
+    const formats = /\.(png|jpe?g|gif|webp|avif)$/i;
+    if (/^https:\/\//i.test(input)) {
+      let url;
+      try { url = new URL(input); } catch (_) { throw new Error('이미지 주소를 확인해주세요: ' + value); }
+      if (url.username || url.password || !formats.test(url.pathname)) throw new Error('지원하지 않는 이미지 주소입니다: ' + value);
+      return url.href;
+    }
+    if (/^[a-z][a-z\d+.-]*:/i.test(input) || input.startsWith('/') || input.includes('\\')) throw new Error('이미지는 저장소 상대경로 또는 HTTPS 주소로 입력해주세요: ' + value);
+    const relative = input.startsWith('./') ? input.slice(2) : input;
+    const segments = relative.split('/').map(segment => {
+      let decoded;
+      try { decoded = decodeURIComponent(segment); } catch (_) { throw new Error('이미지 경로의 인코딩을 확인해주세요: ' + value); }
+      if (!decoded || decoded === '.' || decoded === '..' || /[\/\\\u0000-\u001f\u007f]/.test(decoded)) throw new Error('허용하지 않는 이미지 경로입니다: ' + value);
+      return decoded;
+    });
+    if (!formats.test(segments[segments.length - 1])) throw new Error('지원하는 이미지 형식은 jpg, jpeg, png, gif, webp, avif입니다: ' + value);
+    return './' + segments.map(encodeURIComponent).join('/');
+  }
   function normalize(settings) {
     if (!settings || typeof settings !== 'object') throw new Error('setting.js의 SAN_SETTINGS를 확인해주세요.');
     const cal = settings.캘린더 || {};
@@ -42,15 +63,12 @@ globalThis.SanData = (() => {
       if (typeof cal.메모 !== 'object' || Array.isArray(cal.메모)) throw new Error('메모는 날짜:내용 객체 또는 문자열이어야 합니다.');
       for (const [date, text] of Object.entries(cal.메모)) addNote(date, text);
     }
-    if (settings.영상포트폴리오 != null && !Array.isArray(settings.영상포트폴리오)) throw new Error('영상포트폴리오는 배열이어야 합니다.');
-    const videos = (settings.영상포트폴리오 || []).map((cat, i) => {
-      if (!cat || typeof cat.카테고리 !== 'string' || !cat.카테고리.trim() || !Array.isArray(cat.영상)) throw new Error('영상 카테고리 이름과 영상 배열을 확인해주세요: ' + (i+1));
-      for (const id of cat.영상) if (typeof id !== 'string' || !/^[\w-]{11}$/.test(id)) throw new Error('유튜브 영상은 11자리 ID만 입력해주세요: ' + id);
-      return { title: cat.카테고리.trim(), videos: [...cat.영상] };
+    if (settings.사진포트폴리오 != null && !Array.isArray(settings.사진포트폴리오)) throw new Error('사진포트폴리오는 카테고리 배열이어야 합니다.');
+    const images = (settings.사진포트폴리오 || []).map((cat, i) => {
+      if (!cat || typeof cat.카테고리 !== 'string' || !cat.카테고리.trim() || !Array.isArray(cat.이미지)) throw new Error('사진 카테고리 이름과 이미지 배열을 확인해주세요: ' + (i + 1));
+      return { title: cat.카테고리.trim(), images: cat.이미지.map(imageUrl) };
     });
-    const imageOrder = settings.사진포트폴리오?.카테고리순서 || [];
-    if (!Array.isArray(imageOrder) || imageOrder.some(n=>typeof n !== 'string')) throw new Error('사진 카테고리순서는 이름 배열이어야 합니다.');
-    return { name: settings.이름 || '샨', defaultType, statuses, notes, videos, imageOrder };
+    return { name: settings.이름 || '샨', defaultType, statuses, notes, images };
   }
   function seoulToday(now = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(now);
@@ -58,5 +76,5 @@ globalThis.SanData = (() => {
     return `${get('year')}-${get('month')}-${get('day')}`;
   }
   const statusFor = (key, data, current = seoulToday()) => key < current ? 'closed' : data.statuses[key] || data.defaultType;
-  return { normalize, dateKey, seoulToday, statusFor, labels };
+  return { normalize, dateKey, seoulToday, statusFor, labels, imageUrl };
 })();

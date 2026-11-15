@@ -24,7 +24,7 @@ jobs:
           node-version: '22'
       - name: Validate settings and calendar behavior
         run: node --test tests/data.test.mjs
-      - name: Build portfolio from repository folders
+      - name: Build manually configured image portfolio
         run: node scripts/build.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4

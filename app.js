@@ -33,7 +33,7 @@
     dialog.querySelector('.dialog-close').addEventListener('click',()=>closeDialog(dialog));
     dialog.addEventListener('click',e=>{if(e.target===dialog || e.target===$('mediaContent')) closeDialog(dialog);});
     dialog.addEventListener('close',()=>{
-      if(dialog===mediaDialog) $('mediaContent').replaceChildren(); // 닫는 즉시 유튜브 재생 종료
+      if(dialog===mediaDialog) $('mediaContent').replaceChildren(); // 닫을 때 확대 이미지를 해제합니다.
       document.body.classList.remove('dialog-open');
       previousFocus?.focus({preventScroll:true});
     });
@@ -101,34 +101,20 @@
   setInterval(()=>{if(SanData.seoulToday()!==today)renderCalendar();},30000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderCalendar();});
 
-  function openMedia(type,value,title) {
+  function openImage(value,title) {
     const content=$('mediaContent'); content.replaceChildren();
-    if(type==='video') {
-      if(!/^[\w-]{11}$/.test(value)) return;
-      const wrap=el('div','video-wrap');
-      const frame=el('iframe');frame.title=title;
-      frame.src=`https://www.youtube-nocookie.com/embed/${value}?rel=0&autoplay=1`;
-      frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
-      frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';
-      const info=el('p','', '재생이 제한된 영상은 ');
-      const link=el('a','','YouTube에서 보기');link.href='https://www.youtube.com/watch?v='+value;link.target='_blank';link.rel='noopener noreferrer';
-      info.append(link);wrap.append(frame,info);content.append(wrap);
-    } else {
-      const image=el('img');image.src=value;image.alt=title;content.append(image);
-    }
+    const image=el('img');image.src=value;image.alt=title;content.append(image);
     showDialog(mediaDialog);
   }
-  function image(type,value,title) {
-    const img=el('img');img.src=type==='video'?'https://img.youtube.com/vi/'+value+'/hqdefault.jpg':value;
-    img.alt=title;img.loading='lazy';img.decoding='async';
+  function portfolioImage(value,title) {
+    const img=el('img');img.src=value;img.alt=title;img.loading='lazy';img.decoding='async';
     img.addEventListener('error',()=>{img.alt='이미지를 불러올 수 없습니다 · '+title;img.classList.add('image-error');},{once:true});
     return img;
   }
-  function mediaButton(type,value,title,cls) {
-    const button=el('button',cls);button.type='button';button.setAttribute('aria-label',title+(type==='video'?' 영상 재생':' 이미지 확대'));
-    button.append(image(type,value,title));
-    if(type==='video') {const play=el('span','grid-play','▷');play.setAttribute('aria-hidden','true');button.append(play);}
-    button.addEventListener('click',()=>openMedia(type,value,title));
+  function imageButton(value,title,cls) {
+    const button=el('button',cls);button.type='button';button.setAttribute('aria-label',title+' 이미지 확대');
+    button.append(portfolioImage(value,title));
+    button.addEventListener('click',()=>openImage(value,title));
     return button;
   }
   function wireTabs(tabs,activate) {
@@ -148,41 +134,37 @@
       });
     });
   }
-  const modes={video:true,image:true};
+  let gridMode=true;
   const carousels=[];
   function resizeCarousels(){for(const carousel of carousels)if(carousel.root.offsetWidth)carousel.api.center('auto');}
-  function buildPortfolio(type,categories) {
-    const tabs=$(type+'TypeTabs'), content=$(type+'TypeSections');
-    const field=type==='video'?'videos':'images';
-    if(!categories.length){content.append(el('p','portfolio-empty',type==='video'?'등록된 영상이 없습니다.':'등록된 이미지가 없습니다.'));return;}
+  function buildPortfolio(categories) {
+    const tabs=$('imageTypeTabs'),content=$('imageTypeSections');
+    if(!categories.length){content.append(el('p','portfolio-empty','등록된 이미지가 없습니다.'));return;}
     categories.forEach((category,index)=>{
       const tab=el('button','pf-type-btn'+(index===0?' active':''),category.title);tab.type='button';tab.setAttribute('role','tab');
-      tab.id=`${type}-category-${index}`;tab.setAttribute('aria-controls',`${type}-content-${index}`);tab.setAttribute('aria-selected',String(index===0));tab.tabIndex=index===0?0:-1;tabs.append(tab);
+      tab.id=`image-category-${index}`;tab.setAttribute('aria-controls',`image-content-${index}`);tab.setAttribute('aria-selected',String(index===0));tab.tabIndex=index===0?0:-1;tabs.append(tab);
       const section=el('div','pf-type-section'+(index===0?' active':''));section.hidden=index!==0;
-      section.id=`${type}-content-${index}`;section.setAttribute('role','tabpanel');section.setAttribute('aria-labelledby',tab.id);content.append(section);
-      const items=category[field];
-      if(!items.length){section.append(el('p','portfolio-empty',type==='video'?'등록된 영상이 없습니다.':'등록된 이미지가 없습니다.'));return;}
+      section.id=`image-content-${index}`;section.setAttribute('role','tabpanel');section.setAttribute('aria-labelledby',tab.id);content.append(section);
+      const items=category.images;
+      if(!items.length){section.append(el('p','portfolio-empty','등록된 이미지가 없습니다.'));return;}
       const toolbar=el('div','portfolio-toolbar'),toggle=el('button','portfolio-mode');toggle.type='button';toolbar.append(toggle);section.append(toolbar);
-      const grid=el('div','portfolio-grid '+type);
-      const slider=el('div',type==='video'?'slider-root':'img-slider-root');
-      const stage=el('div',type==='video'?'slider-stage':'img-stage');
+      const grid=el('div','portfolio-grid image'),slider=el('div','img-slider-root'),stage=el('div','img-stage');
       items.forEach((value,i)=>{
         const title=category.title+' '+(i+1);
-        grid.append(mediaButton(type,value,title));
-        const slide=el('div',(type==='video'?'slider-slide':'img-slide')+(i===0?' active':''));
-        slide.append(mediaButton(type,value,title,'media-trigger'));stage.append(slide);
+        grid.append(imageButton(value,title));
+        const slide=el('div','img-slide'+(i===0?' active':''));
+        slide.append(imageButton(value,title,'media-trigger'));stage.append(slide);
       });
       for(const [cls,text] of [['prev','❮'],['next','❯']]){const button=el('button','slider-btn '+cls,text);stage.append(button);}
       const dots=el('div','slider-dots'),wrap=el('div','slider-thumbs-wrap'),thumbs=el('div','slider-thumbs');
-      items.forEach((value,i)=>{const thumb=el('button','slider-thumb-btn');thumb.append(image(type,value,category.title+' '+(i+1)));thumbs.append(thumb);});
+      items.forEach((value,i)=>{const thumb=el('button','slider-thumb-btn');thumb.append(portfolioImage(value,category.title+' '+(i+1)));thumbs.append(thumb);});
       wrap.append(thumbs);slider.append(stage,dots,wrap);section.append(slider,grid);
-      const api=initPortfolioCarousel(slider,type==='video'?'.slider-slide':'.img-slide');carousels.push({root:slider,api});
-      // 화살표 및 썸네일 이동 후 보이지 않는 슬라이드가 키보드 포커스를 받지 않게 합니다.
-      const syncSlides=()=>stage.querySelectorAll('.slider-slide,.img-slide').forEach(s=>{const active=s.classList.contains('active');s.setAttribute('aria-hidden',String(!active));s.querySelector('button').tabIndex=active?0:-1;});
+      const api=initPortfolioCarousel(slider,'.img-slide');carousels.push({root:slider,api});
+      const syncSlides=()=>stage.querySelectorAll('.img-slide').forEach(s=>{const active=s.classList.contains('active');s.setAttribute('aria-hidden',String(!active));s.querySelector('button').tabIndex=active?0:-1;});
       slider.addEventListener('portfolio-view',syncSlides);syncSlides();
       stage.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();stage.querySelector(e.key==='ArrowLeft'?'.prev':'.next').click();}});
-      section.syncMode=()=>{grid.hidden=!modes[type];slider.hidden=modes[type];toggle.textContent=modes[type]?'슬라이드로 보기':'격자로 보기';toggle.setAttribute('aria-pressed',String(modes[type]));};
-      toggle.addEventListener('click',()=>{modes[type]=!modes[type];for(const s of content.children)s.syncMode?.();resizeCarousels();});
+      section.syncMode=()=>{grid.hidden=!gridMode;slider.hidden=gridMode;toggle.textContent=gridMode?'슬라이드로 보기':'격자로 보기';toggle.setAttribute('aria-pressed',String(gridMode));};
+      toggle.addEventListener('click',()=>{gridMode=!gridMode;for(const s of content.children)s.syncMode?.();resizeCarousels();});
       section.syncMode();
     });
     wireTabs(tabs,index=>{
@@ -192,13 +174,7 @@
       tabs.scrollTo({left:selected.offsetLeft-tabs.offsetLeft-(tabs.clientWidth-selected.offsetWidth)/2,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
     });
   }
-  buildPortfolio('video',data.videos);
-  if(Array.isArray(globalThis.SAN_IMAGE_CATEGORIES))buildPortfolio('image',globalThis.SAN_IMAGE_CATEGORIES);
-  else $('imageTypeSections').append(el('p','portfolio-error','이미지 목록을 불러올 수 없습니다. 잠시 후 다시 방문해주세요.'));
-  wireTabs(document.querySelector('.portfolio-cat-tabs'),index=>{
-    ['video','image'].forEach((type,i)=>{const panel=$('pf-'+type);panel.hidden=i!==index;panel.classList.toggle('active',i===index);});
-    resizeCarousels();
-  });
+  buildPortfolio(data.images);
   document.querySelectorAll('details').forEach(d=>d.addEventListener('toggle',resizeCarousels));
   window.addEventListener('resize',resizeCarousels);
 })();
