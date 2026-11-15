@@ -47,9 +47,11 @@
     today = SanData.seoulToday();
     $('calMonthLabel').textContent = `${year}년 ${month}월`;
     $('calDays').replaceChildren();
+    $('monthNoteList').replaceChildren();
     const first = new Date(Date.UTC(year,month-1,1)).getUTCDay();
     const dim = new Date(Date.UTC(year,month,0)).getUTCDate();
     const total = Math.ceil((first+dim)/7)*7;
+    const prefix = `${year}-${String(month).padStart(2,'0')}-`;
     for(let i=0;i<total;i++) {
       const date = new Date(Date.UTC(year,month-1,i-first+1));
       const inMonth = date.getUTCMonth()===month-1;
@@ -75,7 +77,16 @@
       } else cell.setAttribute('aria-hidden','true');
       $('calDays').append(cell);
     }
-
+    const notes = Object.entries(data.notes).filter(([key])=>key.startsWith(prefix)).sort(([a],[b])=>a.localeCompare(b));
+    $('monthNotes').hidden=!notes.length;
+    for(const [key,text] of notes) {
+      const button=el('button','month-note'); button.type='button';
+      const time=el('time','',key.slice(5).replace('-','.')); time.dateTime=key;
+      button.append(time,el('span','',text));
+      button.setAttribute('aria-label',`${key} 메모 전체 보기: ${text}`);
+      button.addEventListener('click',()=>openMemo(key));
+      $('monthNoteList').append(button);
+    }
   }
   function moveMonth(delta) {
     const next=new Date(Date.UTC(year,month-1+delta,1));
