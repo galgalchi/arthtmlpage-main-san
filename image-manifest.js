@@ -7,5 +7,8 @@ globalThis.SAN_IMAGE_CATEGORIES = [
   {
     "title": "일러스트",
     "images": []
+  },
+      "title": "카테고리3",
+    "images": []
   }
 ];
