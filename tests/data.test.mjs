@@ -14,7 +14,7 @@ const base = cal => api.normalize({ 캘린더: cal, 사진포트폴리오: [] })
 
 async function fixture(config) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'san-registered-images-'));
-  for (const name of ['index.html', 'style.css', 'portfolio-carousel.js', 'app.js', '.nojekyll']) await writeFile(path.join(dir, name), 'fixture');
+  for (const name of ['index.html', 'style.css', 'portfolio-carousel.js', 'app.js', 'embed-client.js', 'artmug-embed.js', '.nojekyll']) await writeFile(path.join(dir, name), 'fixture');
   await writeFile(path.join(dir, 'settings-data.js'), dataSource);
   await writeFile(path.join(dir, 'setting.js'), 'globalThis.SAN_SETTINGS = ' + JSON.stringify(config) + ';\n');
   return dir;
@@ -107,6 +107,9 @@ test('등록 폴더의 이미지만 자동 수집하고 이름·빈 분류·일�
   await writeFile(path.join(dir, '사진 포트폴리오', '미등록 분류', '01.png'), 'unregistered');
   const originalSettings = await readFile(path.join(dir, 'setting.js'), 'utf8');
   const result = await build(dir);
+  for (const name of ['embed-client.js', 'artmug-embed.js']) {
+    assert.equal(await readFile(path.join(dir, 'dist', name), 'utf8'), 'fixture');
+  }
   assert.equal(result.images.length, 2);
   assert.equal(result.images[0].title, '폴더와 다른 표시 이름');
   assert.equal(result.images[0].images.length, 3);

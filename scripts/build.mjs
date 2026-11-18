@@ -62,7 +62,7 @@ export async function build(projectRoot = root, output = path.join(projectRoot, 
   const compiled = '/* 배포 시 등록 폴더에서 이미지 목록을 채운 설정입니다. 원본은 저장소의 setting.js에서 수정하세요. */\n' +
     'globalThis.SAN_SETTINGS = ' + JSON.stringify(publishedSettings, null, 2) + ';\n';
   await mkdir(output, { recursive: true });
-  for (const name of ['index.html', 'style.css', 'settings-data.js', 'portfolio-carousel.js', 'app.js', '.nojekyll']) await copyFile(path.join(projectRoot, name), path.join(output, name));
+  for (const name of ['index.html', 'style.css', 'settings-data.js', 'portfolio-carousel.js', 'app.js', 'embed-client.js', 'artmug-embed.js', '.nojekyll']) await copyFile(path.join(projectRoot, name), path.join(output, name));
   await writeFile(path.join(output, 'setting.js'), compiled);
   for (const [relative, source] of files) {
     const destination = path.join(output, relative);
